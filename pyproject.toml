@@ -1,0 +1,10 @@
+[project]
+name = "grpo-rllib"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ray[rllib]==2.40.0",
+    "torch>=2.6.0",
+]
