@@ -3,7 +3,6 @@ from ray.rllib.algorithms.ppo.ppo_learner import PPOLearner
 from ray.rllib.connectors.connector_v2 import ConnectorV2
 import numpy as np
 
-
 NUM_ACTIONS = 1000
 
 
@@ -13,16 +12,17 @@ class GRPOAdvantageEstimation(ConnectorV2):
     Args:
         ConnectorV2 (_type_): _description_
     """
+
     def __call__(
-            self, 
-            *, 
-            rl_module, 
-            batch, 
-            episodes, 
-            explore = None, 
-            shared_data = None, 
+            self,
+            *,
+            rl_module,
+            batch,
+            episodes,
+            explore=None,
+            shared_data=None,
             **kwargs
-        ):
+    ):
         # Device to place all GAE result tensors (advantages and value targets) on.
         device = None
 
@@ -33,12 +33,21 @@ class GRPOAdvantageEstimation(ConnectorV2):
 
         # Compute group relative baseline 
         for episode in episodes:
-            observations = episode.observations[:-1] # List[ObsType] Of length batch size - 1 
-            observation_sample_actions = np.array(
-                [episode.action_space.sample() for _ in observations for _ in range(NUM_ACTIONS)]
-                ).reshape(len(observations), NUM_ACTIONS)
-            next_observations = episode.observations[1:] # List[ObsType] Of length batch size - 1 
-        
+            observations = episode.observations[:-1]  # List[ObsType] Of length batch size - 1, Shape=[num_obs, obs_size]
+            next_observations = episode.observations[1:]  # List[ObsType] Of length batch size - 1, Shape=[num_obs, obs_size]
+
+            observation_sample_actions = self._get_obs_sampled_actions(observations,
+                                                                       episode.action_space)  # [num_obs -1, NUM_ACTIONS, action_size]
+            next_observation_sample_actions = self._get_obs_sampled_actions(next_observations,
+                                                                            episode.action_space)  # [num_obs -1, NUM_ACTIONS, action_size]
+
+
+
+
+    def _get_obs_sampled_actions(self, observations: list[ObsType], action_space) -> np.array:
+        return np.array(
+            [action_space.sample() for _ in observations for _ in range(NUM_ACTIONS)]
+        ).reshape(len(observations) - 1, NUM_ACTIONS)
 
 
 def main():
