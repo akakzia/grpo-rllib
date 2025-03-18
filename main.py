@@ -2,6 +2,7 @@ from ray.rllib.algorithms.ppo import PPO, PPOConfig
 from ray.rllib.algorithms.ppo.ppo_learner import PPOLearner
 from ray.rllib.connectors.connector_v2 import ConnectorV2
 import numpy as np
+from gymnasium.envs.classic_control.pendulum import angle_normalize
 
 NUM_ACTIONS = 1000
 
@@ -33,16 +34,40 @@ class GRPOAdvantageEstimation(ConnectorV2):
 
         # Compute group relative baseline 
         for episode in episodes:
-            observations = episode.observations[:-1]  # List[ObsType] Of length batch size - 1, Shape=[num_obs, obs_size]
-            next_observations = episode.observations[1:]  # List[ObsType] Of length batch size - 1, Shape=[num_obs, obs_size]
+            observations = episode.observations[
+                           :-1]  # List[ObsType] Of length batch size - 1, Shape=[num_obs, obs_size]
+            next_observations = episode.observations[
+                                1:]  # List[ObsType] Of length batch size - 1, Shape=[num_obs, obs_size]
 
-            observation_sample_actions = self._get_obs_sampled_actions(observations,
-                                                                       episode.action_space)  # [num_obs -1, NUM_ACTIONS, action_size]
-            next_observation_sample_actions = self._get_obs_sampled_actions(next_observations,
-                                                                            episode.action_space)  # [num_obs -1, NUM_ACTIONS, action_size]
+            # [num_obs -1, NUM_ACTIONS, action_size]
+            observation_sample_actions = self._get_obs_sampled_actions(observations, episode.action_space)
 
+            # [num_obs -1, NUM_ACTIONS, action_size]
+            next_observation_sample_actions = self._get_obs_sampled_actions(next_observations, episode.action_space)
 
+            # Shape = [num_obs, 1, obs_size]
+            observations = np.expand_dims(observations, axis=1)
+            next_observations = np.expand_dims(next_observations, axis=1)
 
+            # Shape = [num_obs, NUM_ACTIONS, obs_size]
+            observations = np.repeat(observations, NUM_ACTIONS, axis=1)
+            next_observations = np.repeat(next_observations, NUM_ACTIONS, axis=1)
+
+            group_relative_baseline = self._compute_batch_reward(observations, observation_sample_actions)
+            next_group_relative_baseline = self._compute_batch_reward(next_observations,
+                                                                      next_observation_sample_actions)
+
+    def _compute_batch_reward(self, observations: np.ndarray, actions: np.ndarray) -> np.ndarray:
+        batch_reward = np.zeros(shape=(len(observations), 1))
+        for i, obs, u in enumerate(zip(observations, actions)):
+            cos_th, sin_th, thdot = obs[:][0], obs[:][1], obs[:][2]
+
+            th = np.arctan(sin_th / cos_th)
+
+            costs = np.mean(angle_normalize(th) ** 2 + 0.1 * thdot ** 2 + 0.001 * (u ** 2), axis=0)
+            batch_reward[i] = costs
+
+        return batch_reward
 
     def _get_obs_sampled_actions(self, observations: list[ObsType], action_space) -> np.array:
         return np.array(
