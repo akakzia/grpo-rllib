@@ -3,10 +3,11 @@ import numpy as np
 from gymnasium.envs.classic_control.pendulum import angle_normalize
 from ray.rllib.utils.postprocessing.value_predictions import compute_value_targets
 from ray.rllib.evaluation.postprocessing import Postprocessing
-from ray.rllib.utils.postprocessing.zero_padding import split_and_zero_pad_n_episodes
+from ray.rllib.utils.postprocessing.zero_padding import unpad_data_if_necessary, split_and_zero_pad_n_episodes
 from ray.rllib.connectors.common.numpy_to_tensor import NumpyToTensor
 from gymnasium.core import ObsType
-
+from ray.rllib.utils.numpy import convert_to_numpy
+from ray.rllib.core.columns import Columns
 
 NUM_ACTIONS = 1000
 
@@ -76,7 +77,23 @@ class GRPOAdvantageEstimation(ConnectorV2):
 
             next_grb_augmented = np.concatenate([0, next_group_relative_baseline])
 
-            module_value_targets = module_value_targets = compute_value_targets()
+            module_value_targets = compute_value_targets(
+                values=next_grb_augmented,
+                rewards=unpad_data_if_necessary(
+                    episode_lens,
+                    convert_to_numpy(batch[module_id][Columns.REWARDS]),
+                ),
+                terminateds=unpad_data_if_necessary(
+                    episode_lens,
+                    convert_to_numpy(batch[module_id][Columns.TERMINATEDS]),
+                ),
+                truncateds=unpad_data_if_necessary(
+                    episode_lens,
+                    convert_to_numpy(batch[module_id][Columns.TRUNCATEDS]),
+                ),
+                gamma=self.gamma,
+                lambda_=self.lambda_,
+            )
 
             module_advantages = module_value_targets - group_relative_baseline 
             # Drop vf-preds, not needed in loss. Note that in the PPORLModule, vf-preds

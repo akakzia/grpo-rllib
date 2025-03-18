@@ -1,6 +1,6 @@
 from typing import Dict
 from ray.rllib.connectors.learner import AddOneTsToEpisodesAndTruncate
-from ray.rllib.core.learner.learner import Learner
+from ray.rllib.algorithms.ppo.torch.ppo_torch_learner import PPOTorchLearner
 
 from ray.rllib.utils.lambda_defaultdict import LambdaDefaultDict
 
@@ -10,7 +10,7 @@ from ray.rllib.utils.typing import ModuleID, TensorType
 from grpo_advatange_estimation import GRPOAdvantageEstimation
 
 
-class GRPOLearner(Learner): 
+class GRPOLearner(PPOTorchLearner): 
     def build(self):
         super().build()
 
