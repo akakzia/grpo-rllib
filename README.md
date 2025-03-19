@@ -7,6 +7,15 @@ This repository provides an implementation of **Group Relative Policy Optimizati
 - **GRPO Algorithm:** Implements GRPO within RLlib, leveraging its efficiency in (sparse) reinforcement learning.
 - **Classic Control Environments:** Currently, experiments are to be conducted on Pendulum-v1.
 
+## Next Steps
+- Implement `GRPOTorchTrainer` loss. 
+- Implement `GRPORLModule`.
+- Fix termination and truncation flags. 
+- Incorporate lambda in the baseline computation. 
+- Fine tune GRPO on Pendulum-v1.
+- Benchmark GRPO against PPO. 
+- Extend GRPO to other environments.
+
 ## References
 - [DeepSeek: GRPO Introduction](https://github.com/deepseek-ai/DeepSeek-Math)
 - [RLlib Documentation](https://docs.ray.io/en/latest/rllib/index.html)
