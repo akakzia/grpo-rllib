@@ -1,5 +1,6 @@
 from typing import Dict
 from ray.rllib.connectors.learner import AddOneTsToEpisodesAndTruncate
+from ray.rllib.core.learner.torch.torch_learner import TorchLearner
 from ray.rllib.algorithms.ppo.torch.ppo_torch_learner import PPOTorchLearner
 
 from ray.rllib.utils.lambda_defaultdict import LambdaDefaultDict
@@ -7,12 +8,12 @@ from ray.rllib.utils.lambda_defaultdict import LambdaDefaultDict
 from ray.rllib.utils.schedules.scheduler import Scheduler
 from ray.rllib.utils.typing import ModuleID, TensorType
 
-from grpo_advatange_estimation import GRPOAdvantageEstimation
+from src.connectors.grpo_advantage_computation import GRPOAdvantageComputation
 
 
-class GRPOLearner(PPOTorchLearner): 
+class GRPOTorchLearner(PPOTorchLearner): 
     def build(self):
-        super().build()
+        TorchLearner.build(self)
 
         # Dict mapping module IDs to the respective entropy Scheduler instance.
         self.entropy_coeff_schedulers_per_module: Dict[
@@ -30,7 +31,7 @@ class GRPOLearner(PPOTorchLearner):
         # Set up KL coefficient variables (per module).
         # Note that the KL coeff is not controlled by a Scheduler, but seeks
         # to stay close to a given kl_target value.
-        self.curr_kl_coeffs_per_module: Dict[ModuleID, TensorType] = LambdaDefaultDict(
+        self.curr_kl_coeffs_per_module: Dict[ModuleID, TensorType] = LambdaDefaultDict( # type: ignore
             lambda module_id: self._get_tensor_variable(
                 self.config.get_config_for_module(module_id).kl_coeff
             )
@@ -53,7 +54,7 @@ class GRPOLearner(PPOTorchLearner):
             # directly back in the batch. This is then the batch used for
             # `forward_train` and `compute_losses`.
             self._learner_connector.append(
-                GRPOAdvantageEstimation(
+                GRPOAdvantageComputation(
                     gamma=self.config.gamma, lambda_=self.config.lambda_
                 )
             )
